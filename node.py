@@ -30,11 +30,50 @@ class Node(BaseModel):
 			self.save()
 	
 	def __repr__(self):
-		try:
-			return '#%d %s (%d-%d) [%d]' % (self.id or 0, self.label, self.left, self.right, self.parent.id)
-		except:
-			return '#%d %s (%d-%d) [%d]' % (self.id or 0, self.label, self.left, self.right, 0)
 	
+		#	cf. http://peewee.readthedocs.org/en/latest/peewee/api.html#SelectQuery.dicts
+	
+		nodes_list = []
+		def add_node(node):
+			if previous_node is not None:
+				try:
+					parent_id = node.parent.id
+				except:
+					parent_id = 0
+				nodes_list.append({
+					'id': node.id,
+					'label': node.label,
+					'parent_id': parent_id,
+					'children': []
+				})
+		
+		previous_node = None
+		for node in self.get_with_descendants():
+			add_node(previous_node)
+			previous_node = node
+		add_node(previous_node)
+		
+		for parent_node in nodes_list:
+			for child_node in nodes_list:
+				if child_node['parent_id'] == parent_node['id']:
+					parent_node['children'].append(child_node)
+		
+		def show_node(node, prefix1='', prefix2=''):
+			result = '%s%d %s\n' % (prefix1, node['id'], node['label'])
+			if node['children']:
+				last_child = node['children'][-1]
+				for child in node['children']:
+					(p1,p2) = ('└',' ') if (child == last_child) else ('├','│')
+					result += show_node(child, prefix2 + p1 + '────', prefix2 + p2 + '    ')
+			return result
+			
+		result = ''
+		for node in nodes_list:
+			if node['parent_id'] == 0:
+				result += show_node(node)
+	
+		return result
+		
 	@classmethod
 	def _shift(cls, shift, leftBound=None, rightBound=None):
 		#	Update left sides
@@ -45,7 +84,7 @@ class Node(BaseModel):
 			query = query.where(cls.left <= rightBound)
 		query.execute()
 		#	Update right sides
-		query = cls.update(right = cls.right + shift)
+		query = Node.update(right = cls.right + shift)
 		if leftBound is not None:
 			query = query.where(cls.right >= leftBound)
 		if rightBound is not None:
@@ -72,7 +111,7 @@ class Node(BaseModel):
 			self.save()
 		
 		#
-		#	│    m   p     i       │
+		#   │    m   p     i       │
 		#	│    └───┘     │       │
 		#	└──────────────┴───────┘
 		#
@@ -137,19 +176,32 @@ class Node(BaseModel):
 		self._reload()
 		cls.delete().where(cls.left >= self.left, cls.right <= self.right).execute()
 	
+	"""Get the node's parent to the nth level
+	"""
 	def get_parent(self, level=1):
 		parent = self
 		for i in range(level):
 			parent = parent.parent
 		return parent
+	"""Only get direct descendants of the node
+	"""
 	def get_children(self):
 		self._reload()
 		cls = self.__class__
 		return cls.select().where(cls.left > self.left, cls.right < self.right, cls.depth == self.depth + 1).order_by(cls.left)
+	"""Get all descendants from the node, whatever the level
+	"""
 	def get_descendants(self):
 		self._reload()
 		cls = self.__class__
 		return cls.select().where(cls.left > self.left, cls.right < self.right).order_by(cls.left)
+	"""Get all descendants from the node, whatever the level,
+	plus the containing node
+	"""
+	def get_with_descendants(self):
+		self._reload()
+		cls = self.__class__
+		return cls.select().where(cls.left >= self.left, cls.right <= self.right).order_by(cls.left)
 	
 	@classmethod
 	def get_all(cls):
