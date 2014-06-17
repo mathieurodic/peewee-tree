@@ -84,7 +84,7 @@ class Node(BaseModel):
 			query = query.where(cls.left <= rightBound)
 		query.execute()
 		#	Update right sides
-		query = Node.update(right = cls.right + shift)
+		query = cls.update(right = cls.right + shift)
 		if leftBound is not None:
 			query = query.where(cls.right >= leftBound)
 		if rightBound is not None:
@@ -111,7 +111,7 @@ class Node(BaseModel):
 			self.save()
 		
 		#
-		#   │    m   p     i       │
+		#	│    m   p     i       │
 		#	│    └───┘     │       │
 		#	└──────────────┴───────┘
 		#
@@ -206,6 +206,7 @@ class Node(BaseModel):
 	@classmethod
 	def get_all(cls):
 		return cls.select().order_by(cls.left)
+
 
 		
 if __name__ == '__main__':
