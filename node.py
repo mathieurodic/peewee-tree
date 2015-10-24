@@ -11,7 +11,7 @@ class BaseModel(Model):
 class Node(BaseModel):
 
 	label = CharField()
-	parent = ForeignKeyField('self', default=0, null=True)
+	parent = ForeignKeyField('self', default=None, null=True)
 	left = IntegerField(default=0)
 	right = IntegerField(default=1)
 	depth = IntegerField(default=0)
