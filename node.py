@@ -92,7 +92,11 @@ class Node(BaseModel):
 		query.execute()
 		
 	def _reload(self):
-		row = self.select().where(self.pk_expr()).first()
+		try:
+			pk = self.pk_expr()
+		except AttributeError:
+			pk = self._pk_expr()
+		row = self.select().where(pk).first()
 		for key, value in row._data.items():
 			self.__setattr__(key, value)
 		self._dirty.clear()
