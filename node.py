@@ -97,7 +97,8 @@ class Node(BaseModel):
 		except AttributeError:
 			pk = self._pk_expr()
 		row = self.select().where(pk).first()
-		for key, value in row._data.items():
+		data = getattr(row, '_data', row.__data__)
+		for key, value in data.items():
 			self.__setattr__(key, value)
 		self._dirty.clear()
 		
